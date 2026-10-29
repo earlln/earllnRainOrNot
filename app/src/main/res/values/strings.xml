@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">earllnRainOrNot</string>
+    <string name="empty_message">검색 반경 내 CCTV가 없습니다.\n설정에서 검색 반경을 늘려보세요.\n(당겨서 새로고침)</string>
+    <string name="retry">다시 시도</string>
+    <string name="settings">설정</string>
+    <string name="map">지도</string>
+    <string name="refresh">새로고침</string>
+</resources>
