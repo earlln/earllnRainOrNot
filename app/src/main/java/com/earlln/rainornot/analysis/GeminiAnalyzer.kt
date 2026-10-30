@@ -33,7 +33,7 @@ class GeminiAnalyzer(
 
     @Volatile private var workingModel: String? = null
 
-    suspend fun analyze(frames: List<Bitmap>, movingOnly: Boolean): AnalysisResult = withContext(Dispatchers.Default) {
+    suspend fun analyze(frames: List<Bitmap>, excludeSheltered: Boolean): AnalysisResult = withContext(Dispatchers.Default) {
         if (apiKeyProvider().isBlank()) throw MissingApiKeyException()
         require(frames.isNotEmpty())
 
@@ -62,7 +62,7 @@ class GeminiAnalyzer(
             "프레임 ${frames.size}장 비교, 움직임 영역 ${motion.boxes.size}곳" +
                 (if (shown.isNotEmpty()) ": " + shown.joinToString("; ") { it.describe() } else " (움직이는 물체 없음)")
         } else {
-            "움직임 정보 없음 (${motion.reason}) — motion 은 자세로 추정하거나 unknown"
+            "움직임 정보 없음 (${motion.reason}) — motion 은 자세로 추정하거나 unknown. 서 있는 사람도 빠짐없이 기록"
         }
         val prompt = AnalysisPrompt.build(infos, motionNote)
         val body = buildRequest(infos, images, prompt)
@@ -70,7 +70,7 @@ class GeminiAnalyzer(
         val (text, model) = callWithFallback(body)
         Log.d(TAG, "분석 텍스트($model): ${text.take(400)}")
         val verdict = VerdictParser.parse(text) ?: throw AnalysisException("분석 결과 없음 (응답 JSON 파싱 실패)")
-        ResultAggregator.aggregate(verdict, motion, frames.size, movingOnly, model)
+        ResultAggregator.aggregate(verdict, motion, frames.size, excludeSheltered, model)
     }
 
     private fun buildRequest(infos: List<AnalysisPrompt.ImageInfo>, images: List<String>, prompt: String): String {

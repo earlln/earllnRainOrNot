@@ -30,12 +30,14 @@ $lines
 [앱의 움직임 분석] $motionNote
 
 [작업 순서]
-1. 확대본까지 모두 꼼꼼히 살펴 화면의 모든 보행자(걷는 사람, 서 있는 사람, 자전거·킥보드 탄 사람)를 찾으세요.
+1. 확대본까지 모두 꼼꼼히 살펴 화면의 모든 보행자(걷는 사람, 신호를 기다리며 서 있는 사람, 자전거·킥보드 탄 사람)를 찾으세요.
    - 차량·버스 안의 사람, 광고판/포스터 속 인물, 마네킹, 표지판은 제외합니다.
    - 확대본과 전체 화면에 같은 사람이 보이면 한 명으로만 기록합니다.
 2. 각 보행자마다 기록:
    - box_2d: 이미지 1 기준 [ymin, xmin, ymax, xmax] (0~1000 정규화)
    - motion: 이전 프레임과 비교해 위치가 바뀌었거나 걷는 자세면 "moving", 제자리면 "stationary", 비교 불가면 "unknown"
+   - sheltered: 버스정류장 지붕·건물 처마·차양·고가 아래, 실내, 차 안처럼 비를 맞지 않는 위치면 true,
+     하늘이 트인 인도·횡단보도(신호 대기 포함)면 false
    - umbrella: 펼친 우산을 머리 위에 쓰고 있으면 "open_overhead", 접은 우산을 들고만 있으면 "closed_or_carried",
      우산이 없으면 "none", 너무 작거나 가려져 판단할 수 없으면 "unclear"
      (CCTV 는 위에서 내려다보므로 펼친 우산은 사람 머리 위의 둥글거나 다각형인 단색 덩어리로 보입니다.
@@ -65,10 +67,11 @@ $lines
                             "type" to "STRING",
                             "enum" to listOf("open_overhead", "closed_or_carried", "none", "unclear"),
                         ),
+                        "sheltered" to mapOf("type" to "BOOLEAN"),
                         "confidence" to mapOf("type" to "NUMBER"),
                     ),
-                    "required" to listOf("box_2d", "motion", "umbrella", "confidence"),
-                    "propertyOrdering" to listOf("box_2d", "motion", "umbrella", "confidence"),
+                    "required" to listOf("box_2d", "motion", "umbrella", "sheltered", "confidence"),
+                    "propertyOrdering" to listOf("box_2d", "motion", "umbrella", "sheltered", "confidence"),
                 ),
             ),
             "scene" to mapOf(

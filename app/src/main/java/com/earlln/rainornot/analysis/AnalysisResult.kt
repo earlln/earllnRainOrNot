@@ -4,7 +4,7 @@ import kotlin.math.roundToInt
 
 /**
  * 최종 분석 결과.
- * @param total 우산 비율 계산 대상 인원 (movingBasis=true 면 움직이는 보행자, 판단 불가 인원 제외)
+ * @param total 우산 비율 계산 대상 인원 (지붕 아래·판단 불가 인원 제외)
  * @param umbrella 그중 펼친 우산을 쓴 인원
  */
 data class AnalysisResult(
@@ -13,7 +13,7 @@ data class AnalysisResult(
     val isRaining: Boolean,
     val allPedestrians: Int = total,
     val movingCount: Int = 0,
-    val movingBasis: Boolean = false,
+    val shelteredExcluded: Int = 0,
     val motionAvailable: Boolean = false,
     val unclearCount: Int = 0,
     val frameCount: Int = 1,
@@ -24,7 +24,7 @@ data class AnalysisResult(
 ) {
     val ratioPercent: Int get() = if (total == 0) 0 else (umbrella * 100.0 / total).roundToInt()
 
-    private val basisLabel: String get() = if (movingBasis) "움직이는 보행자" else "보행자"
+    private val basisLabel = "보행자"
 
     fun toDisplayText(): String = when {
         total == 0 && isRaining -> "☔ 비 오는 중 (도로/환경 분석)"
@@ -37,9 +37,10 @@ data class AnalysisResult(
     /** 카드 하단에 보여줄 상세 근거 */
     fun toDetailText(): String = buildList {
         val people = StringBuilder("전체 보행자 ${allPedestrians}명")
-        if (motionAvailable) people.append(" · 이동 중 ${movingCount}명") else people.append(" · 움직임 판별 불가(정지영상)")
+        if (shelteredExcluded > 0) people.append(" · 지붕 아래 ${shelteredExcluded}명 제외")
         if (unclearCount > 0) people.append(" · 판단불가 ${unclearCount}명 제외")
         add(people.toString())
+        add(if (motionAvailable) "움직임 확인: 이동 중 ${movingCount}명" else "정지영상이라 움직임 비교 불가")
         if (evidence.isNotEmpty()) add("근거: " + evidence.joinToString(", "))
         if (parasolSuspected) add("⚠️ 맑은 날 그림자가 보여 양산일 가능성이 있습니다")
         add("프레임 ${frameCount}장 분석${if (model.isNotBlank()) " · $model" else ""}")

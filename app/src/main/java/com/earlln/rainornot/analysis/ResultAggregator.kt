@@ -7,14 +7,26 @@ package com.earlln.rainornot.analysis
 object ResultAggregator {
     const val MIN_CONFIDENCE = 0.35
     private const val DEDUPE_IOU = 0.45
+    /** 움직임이 전혀 없고 이 확신도 미만이면 광고판·마네킹 같은 정지 형상으로 보고 제외 */
+    private const val STATIC_FIGURE_MAX_CONFIDENCE = 0.6
 
-    data class Person(val box: Box?, val moving: Boolean, val umbrella: String, val confidence: Double)
+    data class Person(
+        val box: Box?,
+        val moving: Boolean,
+        val sheltered: Boolean,
+        val umbrella: String,
+        val confidence: Double,
+    )
 
+    /**
+     * @param excludeSheltered true 면 지붕·처마·정류장 아래나 실내/차 안 사람을 비율에서 제외한다.
+     *   걷는 사람뿐 아니라 신호를 기다리며 서 있는 사람도 비를 맞는 위치라면 집계한다.
+     */
     fun aggregate(
         verdict: GeminiVerdict,
         motion: MotionResult,
         frameCount: Int,
-        movingOnly: Boolean,
+        excludeSheltered: Boolean,
         model: String = "",
     ): AnalysisResult {
         val people = dedupe(
@@ -22,15 +34,15 @@ object ResultAggregator {
                 .filter { (it.confidence ?: 1.0) >= MIN_CONFIDENCE }
                 .map { obs ->
                     val box = Box.fromList(obs.box2d)
-                    Person(box, isMoving(obs, box, motion), obs.umbrella ?: "unclear", obs.confidence ?: 1.0)
+                    Person(
+                        box, isMoving(obs, box, motion), obs.sheltered == true,
+                        obs.umbrella ?: "unclear", obs.confidence ?: 1.0,
+                    )
                 }
-        )
+        ).filterNot { isStaticFigure(it, motion) }
 
-        val motionAvailable = motion.reliable
-        val moving = people.filter { it.moving }
-        // 움직임 판별이 가능하고 실제로 움직이는 사람이 있을 때만 '움직이는 사람' 기준으로 집계
-        val movingBasis = movingOnly && motionAvailable && moving.isNotEmpty()
-        val population = if (movingBasis) moving else people
+        val sheltered = people.count { it.sheltered }
+        val population = if (excludeSheltered) people.filterNot { it.sheltered } else people
         val judged = population.filter { it.umbrella != "unclear" }
         val open = judged.count { it.umbrella == "open_overhead" }
 
@@ -72,9 +84,9 @@ object ResultAggregator {
             umbrella = open,
             isRaining = isRaining,
             allPedestrians = people.size,
-            movingCount = moving.size,
-            movingBasis = movingBasis,
-            motionAvailable = motionAvailable,
+            movingCount = people.count { it.moving },
+            shelteredExcluded = if (excludeSheltered) sheltered else 0,
+            motionAvailable = motion.reliable,
             unclearCount = population.size - judged.size,
             frameCount = frameCount,
             evidence = evidence,
@@ -84,15 +96,20 @@ object ResultAggregator {
         )
     }
 
-    /** 모델의 판단과 프레임 차분 결과를 함께 사용한다. 작은 보행자는 차분이 더 정확한 경우가 많다. */
+    /** 이동 여부는 참고 정보(상세 표시, 정지 형상 판별)로만 쓴다. */
     internal fun isMoving(obs: PedestrianObs, box: Box?, motion: MotionResult): Boolean {
-        if (!motion.reliable) return obs.motion == "moving"
-        val overlap = if (box != null) motion.overlapRatio(box) else 0.0
-        return when (obs.motion) {
-            "moving" -> true
-            "stationary" -> overlap >= 0.5
-            else -> overlap >= 0.2
-        }
+        if (obs.motion == "moving") return true
+        if (!motion.reliable || box == null) return false
+        return motion.overlapRatio(box) >= 0.2
+    }
+
+    /**
+     * 여러 프레임을 비교했는데 전혀 움직임이 없고 확신도도 낮으면 사람이 아닐 가능성이 높다.
+     * (신호 대기자는 몸을 조금이라도 움직이므로 보통 차분에 걸린다)
+     */
+    internal fun isStaticFigure(p: Person, motion: MotionResult): Boolean {
+        if (!motion.reliable || p.moving || p.box == null) return false
+        return motion.overlapRatio(p.box) == 0.0 && p.confidence < STATIC_FIGURE_MAX_CONFIDENCE
     }
 
     /** 확대본과 전체 화면에서 중복 기록된 동일 인물을 하나로 합친다. */

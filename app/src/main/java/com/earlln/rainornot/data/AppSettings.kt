@@ -15,10 +15,10 @@ class AppSettings(context: Context) {
         get() = prefs.getString("search_radius_km", "10")?.toIntOrNull()?.coerceIn(1, 9999) ?: 10
         set(v) = prefs.edit().putString("search_radius_km", v.toString()).apply()
 
-    /** 움직이는 보행자만 우산 비율에 반영할지 여부 */
-    var movingOnly: Boolean
-        get() = prefs.getBoolean("moving_only", true)
-        set(v) = prefs.edit().putBoolean("moving_only", v).apply()
+    /** 지붕·처마·정류장 아래, 실내/차 안 사람을 우산 비율에서 제외할지 여부 */
+    var excludeSheltered: Boolean
+        get() = prefs.getBoolean("exclude_sheltered", true)
+        set(v) = prefs.edit().putBoolean("exclude_sheltered", v).apply()
 
     var voiceEnabled: Boolean
         get() = prefs.getBoolean("voice_enabled", true)

@@ -20,6 +20,8 @@ data class PedestrianObs(
     @SerializedName("motion") val motion: String? = null,
     /** open_overhead | closed_or_carried | none | unclear */
     @SerializedName("umbrella") val umbrella: String? = null,
+    /** 지붕·처마·정류장 아래, 실내/차 안이면 true (비를 맞지 않는 위치) */
+    @SerializedName("sheltered") val sheltered: Boolean? = null,
     @SerializedName("confidence") val confidence: Double? = null,
 )
 

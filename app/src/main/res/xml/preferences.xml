@@ -17,8 +17,8 @@
         <ListPreference android:key="search_radius_km" android:title="검색 반경"
             android:entries="@array/radius_entries" android:entryValues="@array/radius_values"
             android:defaultValue="10" app:useSimpleSummaryProvider="true" />
-        <SwitchPreferenceCompat android:key="moving_only" android:title="움직이는 사람만 집계"
-            android:summary="여러 프레임을 비교해 걷고 있는 보행자만 우산 비율에 반영합니다 (정지영상 CCTV는 전체 보행자 기준)"
+        <SwitchPreferenceCompat android:key="exclude_sheltered" android:title="지붕 아래 사람 제외"
+            android:summary="버스정류장·건물 처마 아래나 실내에 있어 비를 맞지 않는 사람은 우산 비율에서 뺍니다 (걷는 사람·신호 대기자는 모두 포함)"
             android:defaultValue="true" />
     </PreferenceCategory>
     <PreferenceCategory android:title="결과 표시 방식">

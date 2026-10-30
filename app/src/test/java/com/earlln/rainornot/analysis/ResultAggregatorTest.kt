@@ -8,46 +8,71 @@ import org.junit.Test
 class ResultAggregatorTest {
     private val noMotion = MotionResult.unavailable("정지영상")
 
-    private fun ped(box: List<Double>, motion: String, umbrella: String, conf: Double = 0.9) =
-        PedestrianObs(box, motion, umbrella, conf)
+    private fun ped(
+        box: List<Double>, motion: String, umbrella: String,
+        conf: Double = 0.9, sheltered: Boolean = false,
+    ) = PedestrianObs(box, motion, umbrella, sheltered, conf)
 
     private val dry = SceneObs(false, false, false, false, false, false, "good")
     private val wet = SceneObs(true, false, true, false, false, false, "fair")
 
+    /** 움직임 마스크: 전체 화면에서 주어진 박스 영역만 움직임 */
+    private fun motionAt(vararg boxes: Box): MotionResult {
+        val w = 100; val h = 100
+        val mask = BooleanArray(w * h)
+        for (b in boxes) for (y in b.ymin / 10 until b.ymax / 10) for (x in b.xmin / 10 until b.xmax / 10) mask[y * w + x] = true
+        return MotionResult(true, boxes.toList(), 0.02, mask, w, h, "test")
+    }
+
     @Test
-    fun countsOnlyMovingPedestriansWhenMotionAvailable() {
-        val motion = MotionResult(true, listOf(Box(100, 100, 200, 150)), 0.02, null, 0, 0, "test")
+    fun waitingPedestriansAreCountedButShelteredAreNot() {
+        val motion = motionAt(Box(100, 100, 200, 150))
         val v = GeminiVerdict(
             pedestrians = listOf(
                 ped(listOf(100.0, 100.0, 200.0, 150.0), "moving", "open_overhead"),
-                ped(listOf(100.0, 600.0, 200.0, 650.0), "moving", "none"),
-                ped(listOf(700.0, 700.0, 800.0, 750.0), "stationary", "none"), // 버스정류장 대기자
+                ped(listOf(100.0, 600.0, 200.0, 650.0), "stationary", "open_overhead"), // 신호 대기 (확신도 높음)
+                ped(listOf(400.0, 300.0, 500.0, 350.0), "stationary", "none"),           // 신호 대기
+                ped(listOf(700.0, 700.0, 800.0, 750.0), "stationary", "none", sheltered = true), // 버스정류장 지붕 아래
             ),
             scene = wet, rainJudgement = "raining",
         )
-        val r = ResultAggregator.aggregate(v, motion, 3, movingOnly = true)
-        assertTrue(r.movingBasis)
-        assertEquals(3, r.allPedestrians)
-        assertEquals(2, r.total)
-        assertEquals(1, r.umbrella)
-        assertEquals(50, r.ratioPercent)
+        val r = ResultAggregator.aggregate(v, motion, 3, excludeSheltered = true)
+        assertEquals(4, r.allPedestrians)
+        assertEquals(1, r.shelteredExcluded)
+        assertEquals(3, r.total)
+        assertEquals(2, r.umbrella)
+        assertEquals(1, r.movingCount)
         assertTrue(r.isRaining)
     }
 
     @Test
-    fun fallsBackToAllPedestriansWithoutMotion() {
+    fun shelteredIncludedWhenSettingOff() {
         val v = GeminiVerdict(
             pedestrians = listOf(
                 ped(listOf(100.0, 100.0, 200.0, 150.0), "unknown", "open_overhead"),
-                ped(listOf(100.0, 600.0, 200.0, 650.0), "unknown", "open_overhead"),
+                ped(listOf(700.0, 700.0, 800.0, 750.0), "unknown", "none", sheltered = true),
             ),
             scene = wet, rainJudgement = "uncertain",
         )
-        val r = ResultAggregator.aggregate(v, noMotion, 1, movingOnly = true)
-        assertFalse(r.movingBasis)
+        val r = ResultAggregator.aggregate(v, noMotion, 1, excludeSheltered = false)
         assertEquals(2, r.total)
-        assertEquals(2, r.umbrella)
-        assertTrue(r.isRaining)
+        assertEquals(0, r.shelteredExcluded)
+    }
+
+    @Test
+    fun motionlessLowConfidenceFigureIsDropped() {
+        // 여러 프레임에서 전혀 안 움직이고 확신도도 낮음 → 광고판/마네킹 가능성
+        val motion = motionAt(Box(100, 100, 200, 150))
+        val v = GeminiVerdict(
+            pedestrians = listOf(
+                ped(listOf(100.0, 100.0, 200.0, 150.0), "moving", "none"),
+                ped(listOf(600.0, 600.0, 700.0, 650.0), "stationary", "open_overhead", conf = 0.5),
+            ),
+            scene = dry, rainJudgement = "not_raining",
+        )
+        val r = ResultAggregator.aggregate(v, motion, 3, excludeSheltered = true)
+        assertEquals(1, r.allPedestrians)
+        assertEquals(0, r.umbrella)
     }
 
     @Test
@@ -60,7 +85,7 @@ class ResultAggregatorTest {
             ),
             scene = dry, rainJudgement = "not_raining",
         )
-        val r = ResultAggregator.aggregate(v, noMotion, 1, movingOnly = true)
+        val r = ResultAggregator.aggregate(v, noMotion, 1, excludeSheltered = true)
         assertEquals(2, r.allPedestrians)
         assertEquals(1, r.total)
         assertEquals(1, r.unclearCount)
@@ -77,7 +102,7 @@ class ResultAggregatorTest {
             ),
             scene = wet, rainJudgement = "raining",
         )
-        val r = ResultAggregator.aggregate(v, noMotion, 1, movingOnly = false)
+        val r = ResultAggregator.aggregate(v, noMotion, 1, excludeSheltered = true)
         assertEquals(1, r.allPedestrians)
         assertEquals(1, r.umbrella)
     }
@@ -92,7 +117,7 @@ class ResultAggregatorTest {
             ),
             scene = sunny, rainJudgement = "uncertain",
         )
-        val r = ResultAggregator.aggregate(v, noMotion, 1, movingOnly = true)
+        val r = ResultAggregator.aggregate(v, noMotion, 1, excludeSheltered = true)
         assertTrue(r.parasolSuspected)
         assertFalse(r.isRaining)
     }

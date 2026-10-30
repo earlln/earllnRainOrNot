@@ -192,7 +192,7 @@ class CctvViewModel(app: Application) : AndroidViewModel(app) {
             _analysisState.value = AnalysisState.Analyzing(cctv.displayName)
             throttleApiCall()
             settings.lastApiCallMs = System.currentTimeMillis()
-            val result = analyzer.analyze(frames, settings.movingOnly)
+            val result = analyzer.analyze(frames, settings.excludeSheltered)
             settings.lastQuotaExceededMs = 0L
             resultCache[key] = Cached(result, System.currentTimeMillis())
             return result
