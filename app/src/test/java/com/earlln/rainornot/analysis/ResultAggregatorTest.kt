@@ -108,18 +108,30 @@ class ResultAggregatorTest {
     }
 
     @Test
-    fun parasolOnSunnyDryDayDoesNotMeanRain() {
+    fun sunnyDaySkipsUmbrellaJudgement() {
         val sunny = SceneObs(false, false, false, false, true, false, "good")
         val v = GeminiVerdict(
             pedestrians = listOf(
-                ped(listOf(100.0, 100.0, 200.0, 150.0), "moving", "open_overhead"),
+                ped(listOf(100.0, 100.0, 200.0, 150.0), "moving", "open_overhead"), // 양산
                 ped(listOf(100.0, 600.0, 200.0, 650.0), "moving", "open_overhead"),
             ),
-            scene = sunny, rainJudgement = "uncertain",
+            scene = sunny, rainJudgement = "raining",
         )
         val r = ResultAggregator.aggregate(v, noMotion, 1, excludeSheltered = true)
-        assertTrue(r.parasolSuspected)
+        assertTrue(r.isSunny)
         assertFalse(r.isRaining)
+        assertEquals("☀️ 날씨가 화창합니다", r.toDisplayText())
+        assertEquals("날씨가 화창합니다.", r.toSpeech())
+    }
+
+    @Test
+    fun shadowsWithRainCluesOrAtNightAreNotSunny() {
+        val sunnyButWet = SceneObs(true, true, false, false, true, false, "good")
+        val r1 = ResultAggregator.aggregate(GeminiVerdict(emptyList(), sunnyButWet, "raining"), noMotion, 1, true)
+        assertFalse(r1.isSunny)
+        assertTrue(r1.isRaining)
+        val night = SceneObs(false, false, false, false, true, true, "fair")
+        assertFalse(ResultAggregator.aggregate(GeminiVerdict(emptyList(), night, "uncertain"), noMotion, 1, true).isSunny)
     }
 
     @Test

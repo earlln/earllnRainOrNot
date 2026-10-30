@@ -68,16 +68,17 @@ object ResultAggregator {
             }
             if (open > 0) evidence += "우산 ${open}/${judged.size}명"
         }
-        // 맑은 날 그림자 + 마른 노면에서의 우산은 양산일 가능성
-        val parasolSuspected = open > 0 && sunny && scene?.wetRoad != true && scene?.rainStreaks != true
-        if (parasolSuspected) umbrellaScore = minOf(umbrellaScore, 1)
+        // 해가 떠 있으면(진한 햇빛 그림자 + 낮 + 비 단서 없음) 우산 판단 없이 '화창'으로 안내한다.
+        // 이때 보이는 우산은 양산으로 본다.
+        val isSunny = sunny && scene?.night != true && scene?.wetRoad != true &&
+            scene?.rainStreaks != true && scene?.lensDroplets != true && scene?.splashes != true
 
         val modelScore = when (verdict.rainJudgement) {
             "raining" -> 2
             "not_raining" -> -2
             else -> 0
         }
-        val isRaining = envScore + umbrellaScore + modelScore >= 2
+        val isRaining = !isSunny && envScore + umbrellaScore + modelScore >= 2
 
         return AnalysisResult(
             total = judged.size,
@@ -90,7 +91,7 @@ object ResultAggregator {
             unclearCount = population.size - judged.size,
             frameCount = frameCount,
             evidence = evidence,
-            parasolSuspected = parasolSuspected,
+            isSunny = isSunny,
             summary = verdict.summary,
             model = model,
         )
