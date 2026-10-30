@@ -3,6 +3,14 @@
 name = "earllnrainornot-proxy"
 main = "src/index.js"
 compatibility_date = "2024-09-23"
+workers_dev = true
+
+# earlln.com 아래 /rain-api/* 로도 연결한다 (같은 사이트 주소라 CORS 불필요, workers.dev 차단 회피).
+# 이 경로 외의 earlln.com 페이지에는 영향 없음.
+routes = [
+  { pattern = "earlln.com/rain-api/*", zone_name = "earlln.com" },
+  { pattern = "www.earlln.com/rain-api/*", zone_name = "earlln.com" },
+]
 
 [vars]
 ALLOWED_ORIGINS = "https://earlln.com,https://www.earlln.com"

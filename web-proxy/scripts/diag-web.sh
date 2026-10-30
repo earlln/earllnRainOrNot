@@ -12,6 +12,9 @@ echo "== Gemini CORS preflight from https://earlln.com"
 curl -s -m 15 -o /dev/null -D - -X OPTIONS -H 'Origin: https://earlln.com' -H 'Access-Control-Request-Method: POST' \
   -H 'Access-Control-Request-Headers: content-type,x-goog-api-key' \
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent" | grep -iE '^(HTTP|access-control)'
+echo "== same-site route https://earlln.com/rain-api/"
+curl -s -m 20 -o /tmp/r.json -w '%{http_code}\n' https://earlln.com/rain-api/health; cat /tmp/r.json; echo
+curl -s -m 25 -o /tmp/r2.json -w '%{http_code}\n' "https://earlln.com/rain-api/nearby?lat=37.5665&lon=126.9780&radius=3"; head -c 200 /tmp/r2.json; echo
 echo "== earlln.com addresses"
 for u in http://earlln.com/rain/ https://earlln.com/rain/ https://www.earlln.com/rain/ https://earlln.com/rain/config.js; do
   printf '%s -> ' "$u"; curl -s -m 15 -o /tmp/p -w '%{http_code} %{redirect_url}\n' "$u"

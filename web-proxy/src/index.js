@@ -11,13 +11,17 @@ const MAX_TOPIS_DETAIL = 10;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // earlln.com/rain-api/* 경로로 들어오면 접두어를 떼고, 서명 주소에도 같은 접두어를 붙인다.
+    const prefix = url.pathname.startsWith('/rain-api/') || url.pathname === '/rain-api' ? '/rain-api' : '';
+    const path = url.pathname.slice(prefix.length) || '/';
+    const base = url.origin + prefix;
     const cors = corsHeaders(request, env);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method !== 'GET') return json({ error: 'method not allowed' }, 405, cors);
     try {
-      if (url.pathname === '/health') return json({ ok: true }, 200, cors);
-      if (url.pathname === '/nearby') return await nearby(url, env, ctx, cors);
-      if (url.pathname === '/media') return await media(url, env, cors);
+      if (path === '/health') return json({ ok: true }, 200, cors);
+      if (path === '/nearby') return await nearby(url, base, env, ctx, cors);
+      if (path === '/media') return await media(url, base, env, cors);
       return json({ error: 'not found' }, 404, cors);
     } catch (e) {
       return json({ error: String(e && e.message || e) }, 502, cors);
@@ -45,7 +49,7 @@ function json(obj, status, cors) {
 
 // ── 주변 CCTV ─────────────────────────────────────────
 
-async function nearby(url, env, ctx, cors) {
+async function nearby(url, base, env, ctx, cors) {
   const lat = Number(url.searchParams.get('lat'));
   const lon = Number(url.searchParams.get('lon'));
   const radius = Math.min(MAX_RADIUS_KM, Math.max(0.5, Number(url.searchParams.get('radius')) || 10));
@@ -62,7 +66,6 @@ async function nearby(url, env, ctx, cors) {
     .filter(c => c.distanceKm <= radius)
     .sort((a, b) => (hasCrosswalk(b.name) - hasCrosswalk(a.name)) || (a.distanceKm - b.distanceKm));
 
-  const origin = url.origin;
   const out = await Promise.all(items.map(async c => ({
     id: c.id, name: c.name, lat: c.lat, lon: c.lon, type: c.type, source: c.source,
     distanceKm: Math.round(c.distanceKm * 1000) / 1000,
@@ -70,7 +73,7 @@ async function nearby(url, env, ctx, cors) {
     // TOPIS 영상 서버는 CORS 를 허용하지만 중간 인증서를 빠뜨려 Worker 로는 중계할 수 없다.
     // 브라우저는 빠진 인증서를 스스로 채우므로 원본 주소(direct)를 먼저 쓰고, 실패하면 media(중계)를 쓴다.
     direct: c.url,
-    media: await signUrl(origin, c.url, env.SIGNING_KEY, MEDIA_TTL_SEC),
+    media: await signUrl(base, c.url, env.SIGNING_KEY, MEDIA_TTL_SEC),
   })));
   return json({ items: out, its: !!env.ITS_API_KEY }, 200, cors);
 }
@@ -147,7 +150,7 @@ async function itsNearby(lat, lon, radius, env) {
 
 // ── 미디어 중계 ───────────────────────────────────────
 
-async function media(url, env, cors) {
+async function media(url, base, env, cors) {
   const target = await verifySignature(url.searchParams, env.SIGNING_KEY);
   if (!target) return json({ error: 'invalid or expired signature' }, 403, cors);
 
@@ -160,7 +163,7 @@ async function media(url, env, cors) {
   const type = mediaTypeOf(target, upstream.headers.get('Content-Type'));
   if (type === 'playlist') {
     const text = await upstream.text();
-    const body = await rewritePlaylist(text, target, url.origin, env.SIGNING_KEY, MEDIA_TTL_SEC);
+    const body = await rewritePlaylist(text, target, base, env.SIGNING_KEY, MEDIA_TTL_SEC);
     return new Response(body, {
       headers: { ...cors, 'Content-Type': 'application/vnd.apple.mpegurl', 'Cache-Control': 'no-store' },
     });
