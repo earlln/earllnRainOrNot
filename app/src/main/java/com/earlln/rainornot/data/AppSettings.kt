@@ -2,6 +2,7 @@ package com.earlln.rainornot.data
 
 import android.content.Context
 import androidx.preference.PreferenceManager
+import com.earlln.rainornot.BuildConfig
 
 class AppSettings(context: Context) {
     private val prefs = PreferenceManager.getDefaultSharedPreferences(context.applicationContext)
@@ -34,6 +35,19 @@ class AppSettings(context: Context) {
     var includeHighwayCctv: Boolean
         get() = prefs.getBoolean("include_highway_cctv", true)
         set(v) = prefs.edit().putBoolean("include_highway_cctv", v).apply()
+
+    /** 사용자가 설정 화면에서 입력한 Gemini API 키 (공개 배포 APK 에는 키가 없으므로 필수) */
+    var geminiApiKey: String
+        get() = prefs.getString("gemini_api_key", "").orEmpty().trim()
+        set(v) = prefs.edit().putString("gemini_api_key", v.trim()).apply()
+
+    var itsApiKey: String
+        get() = prefs.getString("its_api_key", "").orEmpty().trim()
+        set(v) = prefs.edit().putString("its_api_key", v.trim()).apply()
+
+    /** 사용자 입력 키가 있으면 우선, 없으면 빌드 시 주입된 키 */
+    val effectiveGeminiKey: String get() = geminiApiKey.ifEmpty { BuildConfig.GEMINI_API_KEY }
+    val effectiveItsKey: String get() = itsApiKey.ifEmpty { BuildConfig.ITS_API_KEY }
 
     var lastApiCallMs: Long
         get() = prefs.getLong("last_api_call_ms", 0L)

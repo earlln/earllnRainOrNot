@@ -6,12 +6,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
+import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.earlln.rainornot.R
@@ -88,7 +90,30 @@ class MainActivity : AppCompatActivity() {
 
         applySettingsToUi()
         updateToggleButtons()
-        if (savedInstanceState == null) checkPermissionAndFetch()
+        if (savedInstanceState == null) {
+            checkPermissionAndFetch()
+            if (settings.effectiveGeminiKey.isBlank()) showApiKeyGuide()
+        }
+    }
+
+    /** 공개 배포 APK 는 Gemini 키가 없으므로 첫 실행 시 입력 방법을 안내한다. */
+    private fun showApiKeyGuide() {
+        AlertDialog.Builder(this)
+            .setTitle("Gemini API 키가 필요합니다")
+            .setMessage(
+                "우산 분석에는 Google Gemini API 키가 필요합니다.\n\n" +
+                    "1. Google AI Studio 에서 무료 키를 발급받고\n" +
+                    "2. 설정 > API 키 > Gemini API 키에 붙여 넣으세요.\n\n" +
+                    "키는 이 기기에만 저장됩니다. CCTV 목록 보기는 키 없이도 됩니다."
+            )
+            .setPositiveButton("설정으로 이동") { _, _ ->
+                settingsLauncher.launch(Intent(this, SettingsActivity::class.java))
+            }
+            .setNeutralButton("키 발급 페이지") { _, _ ->
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey")))
+            }
+            .setNegativeButton("나중에", null)
+            .show()
     }
 
     override fun onDestroy() {
@@ -229,6 +254,7 @@ class MainActivity : AppCompatActivity() {
             }
             is AnalysisState.Done -> {
                 currentCctv = state.cctv
+                b.cardAnalysis.setOnClickListener(null)
                 b.cardAnalysis.visibility = if (screen) View.VISIBLE else View.GONE
                 b.progressAnalysis.visibility = View.GONE
                 b.tvAnalysisStatus.text = (if (state.isAuto) "자동분석 · " else "") + state.cctv.displayName
@@ -249,6 +275,13 @@ class MainActivity : AppCompatActivity() {
                 b.tvAnalysisResult.text = state.message
                 b.tvAnalysisDetail.visibility = View.GONE
                 b.tvAnalysisDistance.visibility = View.GONE
+                if (settings.effectiveGeminiKey.isBlank()) {
+                    b.tvAnalysisDetail.text = "👉 여기를 눌러 설정에서 키를 입력하세요"
+                    b.tvAnalysisDetail.visibility = View.VISIBLE
+                    b.cardAnalysis.setOnClickListener { settingsLauncher.launch(Intent(this, SettingsActivity::class.java)) }
+                } else {
+                    b.cardAnalysis.setOnClickListener(null)
+                }
                 if (speak && settings.voiceEnabled && !state.isAuto) tts.speak("분석 오류. ${state.message}")
             }
         }

@@ -12,6 +12,7 @@ import com.earlln.rainornot.analysis.AnalysisResult
 import com.earlln.rainornot.analysis.FrameGrabber
 import com.earlln.rainornot.analysis.GeminiAnalyzer
 import com.earlln.rainornot.analysis.GeminiQuotaException
+import com.earlln.rainornot.analysis.MissingApiKeyException
 import com.earlln.rainornot.data.AppSettings
 import com.earlln.rainornot.data.CctvData
 import com.earlln.rainornot.data.CctvRepository
@@ -28,8 +29,8 @@ class CctvViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = CctvRepository()
     private val topisRepo = TopisCctvRepository()
     private val grabber = FrameGrabber(app)
-    private val analyzer = GeminiAnalyzer(BuildConfig.GEMINI_API_KEY, BuildConfig.GEMINI_MODEL)
     private val settings = AppSettings(app)
+    private val analyzer = GeminiAnalyzer({ settings.effectiveGeminiKey }, BuildConfig.GEMINI_MODEL)
     val favorites = FavoritesManager(app)
 
     private val _state = MutableLiveData<UiState>(UiState.Idle)
@@ -59,7 +60,7 @@ class CctvViewModel(app: Application) : AndroidViewModel(app) {
                 val radius = radiusKm.toDouble()
                 val (its, topis) = coroutineScope {
                     val itsD = async {
-                        if (includeHighway) runCatching { repo.getNearby(lat, lon, BuildConfig.ITS_API_KEY, radius) }
+                        if (includeHighway) runCatching { repo.getNearby(lat, lon, settings.effectiveItsKey, radius) }
                             .getOrElse { emptyList() } else emptyList()
                     }
                     val topisD = async { runCatching { topisRepo.getNearby(lat, lon, radius) }.getOrElse { emptyList() } }
@@ -110,6 +111,10 @@ class CctvViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun autoAnalyzeWithRetry(candidates: List<CctvData>, lat: Double, lon: Double) {
+        if (settings.effectiveGeminiKey.isBlank()) {
+            _analysisState.value = AnalysisState.Error(MissingApiKeyException().message.orEmpty(), true)
+            return
+        }
         val cooldown = settings.quotaCooldownRemainingMs
         if (cooldown > 0) {
             Log.d(TAG, "API 쿨다운 중 (${cooldown / 1000}초) → 자동분석 스킵")
@@ -154,6 +159,7 @@ class CctvViewModel(app: Application) : AndroidViewModel(app) {
         analysisJob?.cancel()
         analysisJob = viewModelScope.launch {
             try {
+                if (settings.effectiveGeminiKey.isBlank()) throw MissingApiKeyException()
                 val result = analyzeOne(cctv)
                 _analysisState.value = AnalysisState.Done(cctv, result, cctv.distanceTo(lat, lon), false)
             } catch (e: CancellationException) {
@@ -162,6 +168,8 @@ class CctvViewModel(app: Application) : AndroidViewModel(app) {
                 settings.lastQuotaExceededMs = System.currentTimeMillis()
                 _analysisState.value = AnalysisState.Error(e.message.orEmpty(), false)
             } catch (e: AnalysisException) {
+                _analysisState.value = AnalysisState.Error(e.message.orEmpty(), false)
+            } catch (e: MissingApiKeyException) {
                 _analysisState.value = AnalysisState.Error(e.message.orEmpty(), false)
             } catch (e: Exception) {
                 Log.e(TAG, "분석 실패", e)

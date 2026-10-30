@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceCategory android:title="API 키">
+        <EditTextPreference android:key="gemini_api_key" android:title="Gemini API 키 (필수)"
+            android:dialogMessage="Google AI Studio(aistudio.google.com/apikey)에서 무료로 발급받은 키를 붙여 넣으세요. 키는 이 기기에만 저장됩니다." />
+        <Preference android:key="gemini_key_help" android:title="Gemini API 키 발급받기"
+            android:summary="aistudio.google.com/apikey 열기">
+            <intent android:action="android.intent.action.VIEW" android:data="https://aistudio.google.com/apikey" />
+        </Preference>
+        <EditTextPreference android:key="its_api_key" android:title="ITS API 키 (선택)"
+            android:dialogMessage="국가교통정보센터(its.go.kr) OpenAPI 키. 비워두면 기본 키 또는 서울 TOPIS CCTV만 사용합니다." />
+    </PreferenceCategory>
     <PreferenceCategory android:title="분석 동작">
         <SwitchPreferenceCompat android:key="auto_analyze" android:title="자동 분석"
             android:summary="앱 실행 시 가장 가까운 CCTV를 바로 분석합니다" android:defaultValue="true" />

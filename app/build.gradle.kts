@@ -12,7 +12,10 @@ val localProps = Properties().apply {
 }
 
 fun secret(name: String, default: String = ""): String =
-    (localProps.getProperty(name) ?: System.getenv(name) ?: default).trim()
+    (localProps.getProperty(name) ?: System.getenv(name))?.trim()?.takeIf { it.isNotEmpty() } ?: default
+
+// 공개 배포용 릴리스 서명. 키스토어 파일 경로와 비밀번호는 환경변수(GitHub Secrets)로만 받는다.
+val releaseKeystore = secret("RELEASE_KEYSTORE_FILE").takeIf { it.isNotEmpty() }?.let { rootProject.file(it) }
 
 android {
     namespace = "com.earlln.rainornot"
@@ -22,16 +25,30 @@ android {
         applicationId = "com.earlln.rainornot"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = secret("VERSION_CODE", "2").toInt()
+        versionName = secret("VERSION_NAME", "2.0")
 
         buildConfigField("String", "GEMINI_API_KEY", "\"${secret("GEMINI_API_KEY")}\"")
         buildConfigField("String", "ITS_API_KEY", "\"${secret("ITS_API_KEY")}\"")
         buildConfigField("String", "GEMINI_MODEL", "\"${secret("GEMINI_MODEL", "gemini-3.5-flash")}\"")
     }
 
+    signingConfigs {
+        if (releaseKeystore != null && releaseKeystore.exists()) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = secret("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = secret("RELEASE_KEY_ALIAS")
+                keyPassword = secret("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // 공개 배포 APK 에는 Gemini 키를 넣지 않는다 (사용자가 설정 화면에서 직접 입력)
+            buildConfigField("String", "GEMINI_API_KEY", "\"\"")
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

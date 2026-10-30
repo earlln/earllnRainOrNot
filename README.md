@@ -21,11 +21,19 @@
 
 결과 카드에 "전체 보행자 / 이동 중 / 판단불가 제외 / 근거 / 분석 프레임 수"가 함께 표시됩니다.
 
+## 공개 배포 (홈페이지 다운로드)
+- 최신 APK 고정 링크: https://github.com/earlln/earllnRainOrNot/releases/latest/download/earllnRainOrNot.apk
+- `v` 로 시작하는 태그(예: `v2.0.0`)를 푸시하면 **Release APK** 워크플로가 서명된 APK 를 만들어 GitHub Release 에 첨부합니다.
+- 공개용 release APK 에는 **Gemini API 키가 들어가지 않습니다.** 사용자가 앱의 **설정 > API 키** 에 직접 입력합니다
+  (Google AI Studio 무료 키). 첫 실행 시 안내 창이 뜹니다.
+- 릴리스에 필요한 Secrets: `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`
+  (선택 `ITS_API_KEY`). 키스토어를 잃어버리면 이후 버전을 기존 앱 위에 업데이트할 수 없으니 반드시 백업하세요.
+
 ## 빌드 방법
 
 ### GitHub Actions (권장)
 1. 저장소 **Settings → Secrets and variables → Actions → New repository secret** 에 등록
-   - `GEMINI_API_KEY` : Google AI Studio 에서 발급한 Gemini API 키
+   - `GEMINI_API_KEY` : Google AI Studio 에서 발급한 Gemini API 키 (개인용 debug APK 에만 들어감, 앱 설정에서 입력해도 됨)
    - `ITS_API_KEY` : 국가교통정보센터 OpenAPI 키 (없으면 TOPIS 서울 CCTV만 사용)
    - (선택) Variables 에 `GEMINI_MODEL` — 기본값 `gemini-3.5-flash`
 2. 푸시하면 **Actions → Android Build** 가 실행되고, 완료된 실행의 **Artifacts → `earllnRainOrNot-debug-apk`** 에서 APK를 받습니다.

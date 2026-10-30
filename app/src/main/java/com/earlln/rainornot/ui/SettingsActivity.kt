@@ -1,7 +1,9 @@
 package com.earlln.rainornot.ui
 
 import android.os.Bundle
+import android.text.InputType
 import androidx.appcompat.app.AppCompatActivity
+import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceFragmentCompat
 import com.earlln.rainornot.R
 import com.earlln.rainornot.databinding.ActivitySettingsBinding
@@ -27,6 +29,22 @@ class SettingsActivity : AppCompatActivity() {
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
+            for (key in listOf("gemini_api_key", "its_api_key")) {
+                findPreference<EditTextPreference>(key)?.apply {
+                    setOnBindEditTextListener {
+                        it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                        it.setSingleLine()
+                    }
+                    setSummaryProvider { p -> maskKey((p as EditTextPreference).text) }
+                    setOnPreferenceChangeListener { _, v ->
+                        text = (v as String).trim() // 붙여넣기 공백 제거
+                        false
+                    }
+                }
+            }
         }
+
+        private fun maskKey(key: String?): String =
+            if (key.isNullOrBlank()) "미입력 — 탭해서 입력" else "입력됨 (…${key.takeLast(4)})"
     }
 }

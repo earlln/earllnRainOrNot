@@ -218,3 +218,4 @@ class FrameGrabber(context: Context) {
 
 class AnalysisException(message: String) : Exception(message)
 class GeminiQuotaException(message: String) : Exception(message)
+class MissingApiKeyException : Exception("Gemini API 키가 없습니다.\n설정 > API 키에서 입력해주세요.")

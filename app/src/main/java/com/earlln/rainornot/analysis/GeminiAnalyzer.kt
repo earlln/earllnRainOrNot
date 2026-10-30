@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
  * 다중 프레임 + 확대 영역을 Gemini 에 보내 보행자별 우산 여부를 구조화 JSON 으로 받는다.
  */
 class GeminiAnalyzer(
-    private val apiKey: String,
+    private val apiKeyProvider: () -> String,
     primaryModel: String,
 ) {
     private val gson = Gson()
@@ -34,7 +34,7 @@ class GeminiAnalyzer(
     @Volatile private var workingModel: String? = null
 
     suspend fun analyze(frames: List<Bitmap>, movingOnly: Boolean): AnalysisResult = withContext(Dispatchers.Default) {
-        if (apiKey.isBlank()) throw AnalysisException("Gemini API 키가 설정되지 않았습니다.\n(GitHub Secrets 의 GEMINI_API_KEY 확인)")
+        if (apiKeyProvider().isBlank()) throw MissingApiKeyException()
         require(frames.isNotEmpty())
 
         val latest = frames.last()
@@ -113,6 +113,7 @@ class GeminiAnalyzer(
     }
 
     private suspend fun call(model: String, body: String, attempt: Int = 0): String {
+        val apiKey = apiKeyProvider()
         val url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"
         val req = Request.Builder().url(url)
             .header("x-goog-api-key", apiKey)
@@ -134,7 +135,7 @@ class GeminiAnalyzer(
                     errMsg?.contains("not supported", true) == true ->
                     throw ModelUnavailableException(errMsg ?: "HTTP $code")
                 code == 400 && errMsg?.contains("API key", true) == true ->
-                    throw AnalysisException("API 키가 유효하지 않습니다.")
+                    throw AnalysisException("Gemini API 키가 유효하지 않습니다.\n설정 > API 키를 확인해주세요.")
                 code == 403 -> throw AnalysisException("API 키 권한이 없습니다: ${errMsg.orEmpty()}")
                 code >= 500 && attempt < 1 -> {
                     delay(2000)
