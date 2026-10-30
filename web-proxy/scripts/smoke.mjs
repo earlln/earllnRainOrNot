@@ -15,6 +15,9 @@ console.log('nearby', n.status, 'items', (data.items || []).length, 'its', data.
 if (!data.items || !data.items.length) { warn('주변 CCTV 0개 — TOPIS 가 Cloudflare 접속을 막았거나 응답 형식이 바뀌었을 수 있습니다'); process.exit(0); }
 console.log('first 3:', data.items.slice(0, 3).map(i => `${i.name}(${i.type}, ${i.distanceKm}km)`).join(' | '));
 
+const hostOf = m => { try { const u = new URL(m).searchParams.get('u'); const t = new URL(Buffer.from(u, 'base64url').toString()); return `${t.protocol}//${t.host}`; } catch (_) { return '?'; } };
+console.log('media hosts:', [...new Set(data.items.map(i => hostOf(i.media)))].join(', '));
+
 let ok = 0;
 for (const item of data.items.slice(0, 3)) {
   try {
