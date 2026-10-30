@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  서울시 TOPIS CCTV 영상 서버(*.eseoul.go.kr)는 서버 인증서만 보내고 중간 인증서를 빠뜨린다.
+  브라우저는 빠진 인증서를 스스로 받아오지만 안드로이드는 그러지 않아 연결이 실패하므로,
+  검증을 마친 중간 인증서(GlobalSign GCC R6 AlphaSSL CA 2025, SHA-256 A8:83:55:92…08:CA,
+  2027-05-21 만료)를 이 도메인에 한해 신뢰 앵커로 추가한다.
+  갱신: web-proxy/scripts/fetch-intermediate.sh 로 새 인증서를 받아 검증 후 교체.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">eseoul.go.kr</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/globalsign_gcc_r6_alphassl_ca_2025" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
