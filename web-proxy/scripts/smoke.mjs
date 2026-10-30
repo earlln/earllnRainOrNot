@@ -35,4 +35,12 @@ for (const item of data.items.slice(0, 3)) {
   } catch (e) { warn(`${item.name}: ${e.message}`); }
 }
 console.log(`media ok ${ok}/3`);
-if (!ok) warn('CCTV 영상을 하나도 중계하지 못했습니다');
+if (!ok) {
+  warn('CCTV 영상을 하나도 중계하지 못했습니다');
+  // 진단용: 첫 CCTV 의 호스트와 경로(쿼리 제외)를 파일로 남긴다
+  try {
+    const u = new URL(data.items[0].media).searchParams.get('u');
+    const t = new URL(Buffer.from(u, 'base64url').toString());
+    (await import('node:fs')).writeFileSync('diag-target.txt', `${t.host} ${t.pathname}\n`);
+  } catch (_) { }
+}

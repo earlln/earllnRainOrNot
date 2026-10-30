@@ -61,3 +61,4 @@ jobs:
           url=$(grep -o 'https://[a-z0-9.-]*\.workers\.dev' deploy.log | head -1)
           node scripts/smoke.mjs "$url" | tee smoke.log
           { echo '```'; cat smoke.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f diag-target.txt ]; then read -r h p < diag-target.txt; bash scripts/diag-media.sh "$h" "$p" | tee -a smoke.log; fi
