@@ -44,8 +44,10 @@ jobs:
         env:
           ITS_API_KEY: ${{ secrets.ITS_API_KEY }}
         run: |
-          # 서명 키는 배포마다 새로 만든다 (서명 주소는 15분짜리라 바뀌어도 문제 없음)
-          openssl rand -hex 32 | npx --yes wrangler@3.80.0 secret put SIGNING_KEY
+          # 서명 키는 처음 한 번만 만든다 (배포마다 바꾸면 전파되는 동안 서명 검증이 실패함)
+          if ! npx --yes wrangler@3.80.0 secret list | grep -q '"SIGNING_KEY"'; then
+            openssl rand -hex 32 | npx --yes wrangler@3.80.0 secret put SIGNING_KEY
+          fi
           if [ -n "$ITS_API_KEY" ]; then printf '%s' "$ITS_API_KEY" | npx --yes wrangler@3.80.0 secret put ITS_API_KEY; fi
 
       - name: Show worker URL
@@ -62,3 +64,4 @@ jobs:
           node scripts/smoke.mjs "$url" | tee smoke.log
           { echo '```'; cat smoke.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           if [ -f diag-target.txt ]; then read -r h p < diag-target.txt; bash scripts/diag-media.sh "$h" "$p" | tee -a smoke.log; fi
+          bash scripts/fetch-intermediate.sh topiscctv1.eseoul.go.kr || true

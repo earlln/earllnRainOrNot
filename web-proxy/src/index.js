@@ -67,6 +67,9 @@ async function nearby(url, env, ctx, cors) {
     id: c.id, name: c.name, lat: c.lat, lon: c.lon, type: c.type, source: c.source,
     distanceKm: Math.round(c.distanceKm * 1000) / 1000,
     crosswalk: hasCrosswalk(c.name),
+    // TOPIS 영상 서버는 CORS 를 허용하지만 중간 인증서를 빠뜨려 Worker 로는 중계할 수 없다.
+    // 브라우저는 빠진 인증서를 스스로 채우므로 원본 주소(direct)를 먼저 쓰고, 실패하면 media(중계)를 쓴다.
+    direct: c.url,
     media: await signUrl(origin, c.url, env.SIGNING_KEY, MEDIA_TTL_SEC),
   })));
   return json({ items: out, its: !!env.ITS_API_KEY }, 200, cors);
@@ -144,25 +147,14 @@ async function itsNearby(lat, lon, radius, env) {
 
 // ── 미디어 중계 ───────────────────────────────────────
 
-/**
- * CCTV 영상 서버 중에는 HTTPS 인증서가 잘못된 곳이 있어 Cloudflare 가 525/526 으로 거절한다.
- * 그 경우 같은 주소를 http 로 한 번 더 시도한다.
- */
-async function fetchMedia(target, env) {
-  const init = { headers: { 'User-Agent': UA, 'Referer': env.TOPIS_BASE + '/' }, cf: { cacheTtl: 2 } };
-  let res;
-  try { res = await fetch(target, init); } catch (e) { res = null; }
-  if ((!res || res.status === 525 || res.status === 526) && /^https:/i.test(target)) {
-    try { return await fetch(target.replace(/^https:/i, 'http:'), init); } catch (e) { /* 아래에서 처리 */ }
-  }
-  return res || new Response(null, { status: 502 });
-}
-
 async function media(url, env, cors) {
   const target = await verifySignature(url.searchParams, env.SIGNING_KEY);
   if (!target) return json({ error: 'invalid or expired signature' }, 403, cors);
 
-  const upstream = await fetchMedia(target, env);
+  const upstream = await fetch(target, {
+    headers: { 'User-Agent': UA, 'Referer': env.TOPIS_BASE + '/' },
+    cf: { cacheTtl: 2 },
+  });
   if (!upstream.ok) return json({ error: 'upstream ' + upstream.status }, 502, cors);
 
   const type = mediaTypeOf(target, upstream.headers.get('Content-Type'));
