@@ -65,3 +65,4 @@ jobs:
           { echo '```'; cat smoke.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           if [ -f diag-target.txt ]; then read -r h p < diag-target.txt; bash scripts/diag-media.sh "$h" "$p" | tee -a smoke.log; fi
           bash scripts/fetch-intermediate.sh topiscctv1.eseoul.go.kr || true
+          bash scripts/diag-web.sh "$url" || true
