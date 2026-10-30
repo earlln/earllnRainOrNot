@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.text.InputType
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.EditTextPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import com.earlln.rainornot.BuildConfig
 import com.earlln.rainornot.R
 import com.earlln.rainornot.databinding.ActivitySettingsBinding
 
@@ -29,6 +31,8 @@ class SettingsActivity : AppCompatActivity() {
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
+            findPreference<Preference>("app_version")?.summary =
+                "${BuildConfig.VERSION_NAME} (빌드 ${BuildConfig.VERSION_CODE})"
             for (key in listOf("gemini_api_key", "its_api_key")) {
                 findPreference<EditTextPreference>(key)?.apply {
                     setOnBindEditTextListener {

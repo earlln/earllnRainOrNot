@@ -34,4 +34,11 @@
             android:summary="국도·고속도로 CCTV(ITS)를 목록에 포함합니다. 끄면 서울 시내 CCTV만 표시됩니다."
             android:defaultValue="true" />
     </PreferenceCategory>
+    <PreferenceCategory android:title="앱 정보">
+        <Preference android:key="app_version" android:title="버전" android:selectable="false" />
+        <Preference android:key="app_homepage" android:title="홈페이지"
+            android:summary="earlln.com · 최신 버전 받기">
+            <intent android:action="android.intent.action.VIEW" android:data="https://earlln.com/product.html#earllnrainornot" />
+        </Preference>
+    </PreferenceCategory>
 </PreferenceScreen>
