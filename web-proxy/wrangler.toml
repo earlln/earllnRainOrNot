@@ -1,0 +1,11 @@
+# earllnRainOrNot 웹앱(아이폰 등 브라우저)용 중계 서버
+# 브라우저는 CORS 때문에 TOPIS/ITS/CCTV 영상에 직접 접근할 수 없어 이 Worker 가 대신 받아 준다.
+name = "earllnrainornot-proxy"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+ALLOWED_ORIGINS = "https://earlln.com,https://www.earlln.com"
+TOPIS_BASE = "https://topis.seoul.go.kr"
+ITS_BASE = "https://openapi.its.go.kr:9443"
+# 비밀값(SIGNING_KEY, ITS_API_KEY)은 배포 워크플로가 `wrangler secret put` 으로 넣는다.
