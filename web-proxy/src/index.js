@@ -133,15 +133,26 @@ async function topisNearby(lat, lon, radius, env, ctx) {
   })).filter(c => c.url);
 }
 
+// ITS 서버는 해외 접속을 막아 Cloudflare 에서는 시간 초과가 난다.
+// 한 번 실패하면 잠시 건너뛰어 서울(TOPIS) 조회까지 느려지지 않게 한다 (Worker 인스턴스 단위).
+const ITS_RETRY_AFTER_MS = 10 * 60 * 1000;
+let itsFailedAt = 0;
+
 async function itsNearby(lat, lon, radius, env) {
   if (!env.ITS_API_KEY) return [];
+  if (Date.now() - itsFailedAt < ITS_RETRY_AFTER_MS) throw new Error('ITS 일시 중지 (최근 접속 실패)');
+  try { return await itsFetchAll(lat, lon, radius, env); }
+  catch (e) { itsFailedAt = Date.now(); throw e; }
+}
+
+async function itsFetchAll(lat, lon, radius, env) {
   const d = Math.min(radius, 500) / 111;
   const results = await Promise.all(['1', '2', '3'].map(async type => {
     const q = new URLSearchParams({
       apiKey: env.ITS_API_KEY, type: 'its', cctvType: type,
       minX: lon - d, maxX: lon + d, minY: lat - d, maxY: lat + d, getType: 'json',
     });
-    const r = await fetch(env.ITS_BASE + '/cctvInfo?' + q, { signal: AbortSignal.timeout(8000) });
+    const r = await fetch(env.ITS_BASE + '/cctvInfo?' + q, { signal: AbortSignal.timeout(3000) });
     if (!r.ok) throw new Error(`ITS HTTP ${r.status}`);
     const text = await r.text();
     let j;
