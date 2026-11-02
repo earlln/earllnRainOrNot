@@ -298,6 +298,23 @@ class MainActivity : AppCompatActivity() {
     private fun onAnalyzeClick(cctv: CctvData) {
         vm.analyzeManual(cctv)
         showSnackbar("${cctv.displayName} 분석 시작...")
+        revealAnalysisCard()
+    }
+
+    /** 목록 아래쪽에서 눌러도 결과가 맨 위 카드에 나온다는 것을 알 수 있게 목록을 올리고 카드를 깜빡인다 */
+    private fun revealAnalysisCard() {
+        b.recyclerView.smoothScrollToPosition(0)
+        val card = b.cardAnalysis
+        if (card.visibility != View.VISIBLE) return
+        val highlight = ContextCompat.getColor(this, R.color.accent)
+        val width = (3 * resources.displayMetrics.density).toInt()
+        card.strokeColor = highlight
+        card.strokeWidth = width
+        card.animate().cancel()
+        card.alpha = 0.4f
+        card.animate().alpha(1f).setDuration(350).withEndAction {
+            card.postDelayed({ card.strokeWidth = 0 }, 900)
+        }.start()
     }
 
     private fun onWatchClick(cctv: CctvData) {
