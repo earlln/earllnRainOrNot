@@ -55,9 +55,14 @@ async function nearby(url, base, env, ctx, cors) {
   const radius = Math.min(MAX_RADIUS_KM, Math.max(0.5, Number(url.searchParams.get('radius')) || 10));
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return json({ error: 'lat/lon required' }, 400, cors);
 
+  let itsError = null;
   const [topis, its] = await Promise.all([
     topisNearby(lat, lon, radius, env, ctx).catch(() => []),
-    itsNearby(lat, lon, radius, env).catch(() => []),
+    itsNearby(lat, lon, radius, env).catch(e => {
+      // 키가 메시지에 섞이지 않도록 지운다
+      itsError = String(e && e.message || e).split(env.ITS_API_KEY || '\u0000').join('***').slice(0, 200);
+      return [];
+    }),
   ]);
   const seen = new Set();
   const items = [...its, ...topis]
@@ -75,7 +80,7 @@ async function nearby(url, base, env, ctx, cors) {
     direct: c.url,
     media: await signUrl(base, c.url, env.SIGNING_KEY, MEDIA_TTL_SEC),
   })));
-  return json({ items: out, its: !!env.ITS_API_KEY }, 200, cors);
+  return json({ items: out, its: !!env.ITS_API_KEY, itsError }, 200, cors);
 }
 
 async function cachedJson(cacheKey, ttlSec, ctx, loader) {
@@ -136,8 +141,11 @@ async function itsNearby(lat, lon, radius, env) {
       apiKey: env.ITS_API_KEY, type: 'its', cctvType: type,
       minX: lon - d, maxX: lon + d, minY: lat - d, maxY: lat + d, getType: 'json',
     });
-    const r = await fetch(env.ITS_BASE + '/cctvInfo?' + q);
-    const j = await r.json();
+    const r = await fetch(env.ITS_BASE + '/cctvInfo?' + q, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`ITS HTTP ${r.status}`);
+    const text = await r.text();
+    let j;
+    try { j = JSON.parse(text); } catch (_) { throw new Error('ITS 응답이 JSON 아님: ' + text.slice(0, 120)); }
     return (j.response && j.response.data || []).map(x => ({
       id: 'its-' + (x.roadsectionid || '') + '-' + (x.cctvname || ''),
       name: (x.cctvname || '').trim() || '이름 없는 CCTV',

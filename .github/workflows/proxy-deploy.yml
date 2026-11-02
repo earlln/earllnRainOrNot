@@ -68,3 +68,16 @@ jobs:
           if [ -f diag-target.txt ]; then read -r h p < diag-target.txt; bash scripts/diag-media.sh "$h" "$p" | tee -a smoke.log; fi
           bash scripts/fetch-intermediate.sh topiscctv1.eseoul.go.kr || true
           bash scripts/diag-web.sh "$url" || true
+
+      - name: ITS API check from runner (no key printed)
+        if: steps.cf.outputs.skip != 'true'
+        env:
+          K: ${{ secrets.PROXY_ITS_API_KEY }}
+        run: |
+          [ -z "$K" ] && { echo "no PROXY_ITS_API_KEY"; exit 0; }
+          url="https://openapi.its.go.kr:9443/cctvInfo?apiKey=$K&type=its&cctvType=1&minX=127.2&maxX=127.6&minY=36.2&maxY=36.5&getType=json"
+          code=$(curl -s -m 25 -o its.json -w '%{http_code}' "$url" || echo timeout)
+          echo "HTTP $code, bytes $(wc -c < its.json 2>/dev/null || echo 0)"
+          sed "s/$K/***/g" its.json | head -c 400; echo
+          python3 -c "import json;d=json.load(open('its.json'));r=d.get('response',{});print('datacount',r.get('datacount'),'first',[(x.get('cctvname'),x.get('cctvurl','')[:60]) for x in (r.get('data') or [])[:2]])" 2>/dev/null || true
+

@@ -39,7 +39,7 @@ console.log(`media ok ${ok}/3`);
 // 지방(대전시청 반경 10km): ITS 키가 있으면 국도 CCTV 가 나와야 한다
 const far = await (await fetch(`${base}/nearby?lat=36.3504&lon=127.3845&radius=10`, { headers })).json();
 const its = (far.items || []).filter(i => i.source === 'its');
-console.log('daejeon items', (far.items || []).length, 'its', its.length, 'its key', far.its);
+console.log('daejeon items', (far.items || []).length, 'its', its.length, 'its key', far.its, 'itsError', far.itsError);
 if (far.its && its.length) {
   console.log('its first 3:', its.slice(0, 3).map(i => `${i.name}(${i.type}, ${i.distanceKm}km) ${hostOf(i.media)}`).join(' | '));
   for (const item of its.slice(0, 2)) {
