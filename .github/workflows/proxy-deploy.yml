@@ -2,8 +2,7 @@ name: Deploy web proxy (Cloudflare Worker)
 
 # 웹앱(아이폰 등 브라우저)용 중계 서버를 Cloudflare Workers 에 배포합니다.
 # 필요한 Secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
-# 선택: PROXY_ITS_API_KEY — 국가교통정보센터(ITS) 키. 중계 서버에만 넣는다.
-#       (ITS_API_KEY 라는 이름은 안드로이드 빌드에도 주입되어 공개 APK 에 노출되므로 따로 둔다)
+# ITS(국도) 키는 넣지 않는다: ITS 서버가 해외 접속을 막고, 키는 사용자가 각자 발급받아 입력한다.
 on:
   push:
     paths: ['web-proxy/**', '.github/workflows/proxy-deploy.yml']
@@ -43,14 +42,13 @@ jobs:
 
       - name: Set secrets
         if: steps.cf.outputs.skip != 'true'
-        env:
-          ITS_API_KEY: ${{ secrets.PROXY_ITS_API_KEY }}
         run: |
           # 서명 키는 처음 한 번만 만든다 (배포마다 바꾸면 전파되는 동안 서명 검증이 실패함)
           if ! npx --yes wrangler@3.80.0 secret list | grep -q '"SIGNING_KEY"'; then
             openssl rand -hex 32 | npx --yes wrangler@3.80.0 secret put SIGNING_KEY
           fi
-          if [ -n "$ITS_API_KEY" ]; then printf '%s' "$ITS_API_KEY" | npx --yes wrangler@3.80.0 secret put ITS_API_KEY; fi
+          # 예전에 넣은 ITS 키가 남아 있으면 지운다 (기본 키를 제공하지 않음)
+          if npx --yes wrangler@3.80.0 secret list | grep -q '"ITS_API_KEY"'; then yes | npx --yes wrangler@3.80.0 secret delete ITS_API_KEY || true; fi
 
       - name: Show worker URL
         if: steps.cf.outputs.skip != 'true'
@@ -68,16 +66,3 @@ jobs:
           if [ -f diag-target.txt ]; then read -r h p < diag-target.txt; bash scripts/diag-media.sh "$h" "$p" | tee -a smoke.log; fi
           bash scripts/fetch-intermediate.sh topiscctv1.eseoul.go.kr || true
           bash scripts/diag-web.sh "$url" || true
-
-      - name: ITS API check from runner (no key printed)
-        if: steps.cf.outputs.skip != 'true'
-        env:
-          K: ${{ secrets.PROXY_ITS_API_KEY }}
-        run: |
-          [ -z "$K" ] && { echo "no PROXY_ITS_API_KEY"; exit 0; }
-          url="https://openapi.its.go.kr:9443/cctvInfo?apiKey=$K&type=its&cctvType=1&minX=127.2&maxX=127.6&minY=36.2&maxY=36.5&getType=json"
-          code=$(curl -s -m 25 -o its.json -w '%{http_code}' "$url" || echo timeout)
-          echo "HTTP $code, bytes $(wc -c < its.json 2>/dev/null || echo 0)"
-          sed "s/$K/***/g" its.json | head -c 400; echo
-          python3 -c "import json;d=json.load(open('its.json'));r=d.get('response',{});print('datacount',r.get('datacount'),'first',[(x.get('cctvname'),x.get('cctvurl','')[:60]) for x in (r.get('data') or [])[:2]])" 2>/dev/null || true
-

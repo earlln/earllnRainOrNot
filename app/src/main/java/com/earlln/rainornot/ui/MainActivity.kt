@@ -224,7 +224,8 @@ class MainActivity : AppCompatActivity() {
             }
             is UiState.Empty -> {
                 adapter.submitList(emptyList())
-                b.tvEmpty.text = "검색 반경(${settings.searchRadiusKm}km) 내 CCTV가 없습니다.\n설정에서 반경을 늘려보세요."
+                b.tvEmpty.text = "검색 반경(${settings.searchRadiusKm}km) 내 CCTV가 없습니다.\n설정에서 반경을 늘려보세요." +
+                    if (settings.effectiveItsKey.isBlank()) "\n\n서울 밖이라면 설정 › ITS API 키를 입력하면\n전국 국도 CCTV도 볼 수 있어요. (발급 방법은 설정에 있어요)" else ""
                 b.tvEmpty.visibility = View.VISIBLE
             }
             is UiState.Error -> {

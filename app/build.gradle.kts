@@ -46,8 +46,9 @@ android {
 
     buildTypes {
         release {
-            // 공개 배포 APK 에는 Gemini 키를 넣지 않는다 (사용자가 설정 화면에서 직접 입력)
+            // 공개 배포 APK 에는 Gemini·ITS 키를 넣지 않는다 (사용자가 설정 화면에서 각자 발급받아 입력)
             buildConfigField("String", "GEMINI_API_KEY", "\"\"")
+            buildConfigField("String", "ITS_API_KEY", "\"\"")
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

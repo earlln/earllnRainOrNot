@@ -4,7 +4,7 @@
 (기존 `NalCCTV` 앱을 재구성·개선한 버전)
 
 ## 주요 기능
-- 현재 위치 주변 CCTV 검색: 서울시 TOPIS(실시간) + 국가교통정보센터 ITS(국도)
+- 현재 위치 주변 CCTV 검색: 서울시 TOPIS(실시간, 키 불필요) + 국가교통정보센터 ITS(전국 국도, **각자 발급받은 키를 설정에 입력**)
 - 앱 실행 시 자동 분석 (즐겨찾기 → 교차로·영상 CCTV 우선), 목록에서 수동 분석
 - 결과 카드 + 한국어 음성 안내(TTS), CCTV 영상 보기, 지도(osmdroid), 즐겨찾기(최대 5개)
 
@@ -27,14 +27,14 @@
 - 공개용 release APK 에는 **Gemini API 키가 들어가지 않습니다.** 사용자가 앱의 **설정 > API 키** 에 직접 입력합니다
   (Google AI Studio 무료 키). 첫 실행 시 안내 창이 뜹니다.
 - 릴리스에 필요한 Secrets: `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`
-  (선택 `ITS_API_KEY`). 키스토어를 잃어버리면 이후 버전을 기존 앱 위에 업데이트할 수 없으니 반드시 백업하세요.
+  키스토어를 잃어버리면 이후 버전을 기존 앱 위에 업데이트할 수 없으니 반드시 백업하세요.
 
 ## 빌드 방법
 
 ### GitHub Actions (권장)
 1. 저장소 **Settings → Secrets and variables → Actions → New repository secret** 에 등록
    - `GEMINI_API_KEY` : Google AI Studio 에서 발급한 Gemini API 키 (개인용 debug APK 에만 들어감, 앱 설정에서 입력해도 됨)
-   - `ITS_API_KEY` : 국가교통정보센터 OpenAPI 키 (없으면 TOPIS 서울 CCTV만 사용)
+   - (개인 debug 빌드용, 선택) `ITS_API_KEY` 는 쓰지 않습니다. ITS 키는 앱 설정 › ITS API 키에 각자 입력합니다.
    - (선택) Variables 에 `GEMINI_MODEL` — 기본값 `gemini-3.5-flash`
 2. 푸시하면 **Actions → Android Build** 가 실행되고, 완료된 실행의 **Artifacts → `earllnRainOrNot-debug-apk`** 에서 APK를 받습니다.
 
