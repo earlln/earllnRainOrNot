@@ -38,8 +38,8 @@ jobs:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-          # Gemini 키는 release 빌드에 넣지 않습니다(build.gradle.kts). ITS 키만 주입합니다.
-          ITS_API_KEY: ${{ secrets.ITS_API_KEY }}
+          # Gemini 키는 release 빌드에 넣지 않습니다(build.gradle.kts). ITS 키는 기본 키로 주입하고, 사용자가 설정에서 개인 키를 넣으면 그것을 우선합니다.
+          ITS_API_KEY: ${{ secrets.ITS_API_KEY || secrets.PROXY_ITS_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           VERSION_NAME: ${{ github.ref_name }}
           VERSION_CODE: ${{ github.run_number }}

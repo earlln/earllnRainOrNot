@@ -39,7 +39,10 @@ class SettingsActivity : AppCompatActivity() {
                         it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                         it.setSingleLine()
                     }
-                    setSummaryProvider { p -> maskKey((p as EditTextPreference).text) }
+                    setSummaryProvider { p ->
+                        val text = (p as EditTextPreference).text
+                        if (key == "its_api_key") maskItsKey(text) else maskKey(text)
+                    }
                     setOnPreferenceChangeListener { _, v ->
                         text = (v as String).trim() // 붙여넣기 공백 제거
                         false
@@ -50,5 +53,11 @@ class SettingsActivity : AppCompatActivity() {
 
         private fun maskKey(key: String?): String =
             if (key.isNullOrBlank()) "미입력 — 탭해서 입력" else "입력됨 (…${key.takeLast(4)})"
+
+        /** ITS 는 기본 키가 있으므로 비어 있으면 '기본 키 사용'으로 안내한다 */
+        private fun maskItsKey(key: String?): String =
+            if (key.isNullOrBlank()) {
+                if (BuildConfig.ITS_API_KEY.isNotBlank()) "기본 키 사용 중 — 개인 키를 넣으면 우선 사용" else "미입력 — 서울 CCTV만 표시"
+            } else "개인 키 사용 중 (…${key.takeLast(4)})"
     }
 }

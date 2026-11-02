@@ -25,7 +25,7 @@ jobs:
         env:
           # 저장소 Settings → Secrets and variables → Actions 에 등록한 값이 APK 에 주입됩니다.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ITS_API_KEY: ${{ secrets.ITS_API_KEY }}
+          ITS_API_KEY: ${{ secrets.ITS_API_KEY || secrets.PROXY_ITS_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then echo "::warning::GEMINI_API_KEY secret 이 없어 분석 기능이 동작하지 않는 APK 가 만들어집니다."; fi
