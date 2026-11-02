@@ -35,6 +35,20 @@ for (const item of data.items.slice(0, 3)) {
   } catch (e) { warn(`${item.name}: ${e.message}`); }
 }
 console.log(`media ok ${ok}/3`);
+
+// 지방(대전시청 반경 10km): ITS 키가 있으면 국도 CCTV 가 나와야 한다
+const far = await (await fetch(`${base}/nearby?lat=36.3504&lon=127.3845&radius=10`, { headers })).json();
+const its = (far.items || []).filter(i => i.source === 'its');
+console.log('daejeon items', (far.items || []).length, 'its', its.length, 'its key', far.its);
+if (far.its && its.length) {
+  console.log('its first 3:', its.slice(0, 3).map(i => `${i.name}(${i.type}, ${i.distanceKm}km) ${hostOf(i.media)}`).join(' | '));
+  for (const item of its.slice(0, 2)) {
+    try {
+      const r = await fetch(item.media, { headers });
+      console.log(`  its media ${item.name}: HTTP ${r.status} ${r.headers.get('content-type')} acao=${r.headers.get('access-control-allow-origin')}`);
+    } catch (e) { warn(`its media ${item.name}: ${e.message}`); }
+  }
+} else if (far.its) warn('ITS 키는 있지만 대전 주변 ITS CCTV 가 0개 — 키 만료/승인 상태를 확인하세요');
 if (!ok) {
   warn('CCTV 영상을 하나도 중계하지 못했습니다');
   // 진단용: 첫 CCTV 의 호스트와 경로(쿼리 제외)를 파일로 남긴다
